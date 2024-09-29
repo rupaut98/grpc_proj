@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package user;
+
+service TaskService {
+    rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+    rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+    rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
+    rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
+}
+
+message CreateTaskRequest {
+    string description = 1;
+    int32 priority = 2;
+    int32 id = 3;
+}
+
+message CreateTaskResponse {
+    int32 response = 1;
+}
+
+message GetTaskRequest{
+    int32 id = 1;
+}
+
+message GetTaskResponse{
+    string description = 1;
+    int32 priority = 2;
+    int32 response = 3;
+}
+
+message DeleteTaskRequest{
+    int32 id = 1;
+}
+
+message DeleteTaskResponse{
+    int32 response = 1;
+}
+
+message UpdateTaskRequest{
+    int32 id = 1;
+    string description = 2;
+    int32 priority = 3;
+}
+
+message UpdateTaskResponse{
+    int32 response = 1;
+}
+
+
