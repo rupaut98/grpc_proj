@@ -1,9 +1,4 @@
 import grpc
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
-
 from generated import task_pb2, task_pb2_grpc
 
 def run():

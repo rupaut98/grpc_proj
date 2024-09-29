@@ -1,37 +1,56 @@
 import grpc
-import task_pb2
-import task_pb2_grpc
+from concurrent import futures
+import sys
+import os
 
-def run():
-    with grpc.insecure_channel('localhost:50051') as channel:
-        stub = task_pb2_grpc.TaskServiceStub(channel)
+sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 
-        create_response = stub.CreateTask(
-            task_pb2.CreateTaskRequest(id=1, description="Learn gRPC", priority=1)
-        )
-        print(f"CreateTask Response: {create_response.response}")
+from generated import task_pb2, task_pb2_grpc
 
-        # Get the task
-        get_response = stub.GetTask(task_pb2.GetTaskRequest(id=1))
-        print(f"GetTask Response: Description - {get_response.description}, Priority - {get_response.priority}, Response - {get_response.response}")
+tasks = {}
 
-        # Update the task
-        update_response = stub.UpdateTask(
-            task_pb2.UpdateTaskRequest(id=1, description="Learn gRPC in Python", priority=2)
-        )
-        print(f"UpdateTask Response: {update_response.response}")
+class TaskService(task_pb2_grpc.TaskServiceServicer):
 
-        # Get the updated task
-        get_updated_response = stub.GetTask(task_pb2.GetTaskRequest(id=1))
-        print(f"Updated GetTask Response: Description - {get_updated_response.description}, Priority - {get_updated_response.priority}, Response - {get_updated_response.response}")
+    def CreateTask(self, request, context):
+        if request.id in tasks:
+            return task_pb2.CreateTaskResponse(response = 0)
+        tasks[request.id] = {
+            "description": request.description,
+            "priority": request.priority
+        }
+        return task_pb2.CreateTaskResponse(response = 1)
+    
+    def GetTask(self, request, context):
+        if request.id in tasks:
+            return task_pb2.GetTaskResponse(description = tasks[request.id]["description"], priority=tasks[request.id]["priority"], response = 1)
+        else:
+            return task_pb2.GetTaskResponse(response = 0)
+        
+    def DeleteTask(self, request, context):
+        if request.id in tasks:
+            tasks.pop(request.id)
+            return task_pb2.DeleteTaskResponse(response = 1)
+        else:
+            return task_pb2.DeleteTaskResponse(response = 0)
+        
+    def UpdateTask(self, request, context):
+        if request.id in tasks:
+            if request.description:
+                tasks[request.id]["description"] = request.description
+            if request.priority:
+                tasks[request.id]["priority"] = request.priority
 
-        # Delete the task
-        delete_response = stub.DeleteTask(task_pb2.DeleteTaskRequest(id=1))
-        print(f"DeleteTask Response: {delete_response.response}")
+            return task_pb2.UpdateTaskResponse(response = 1)
+        else:
+            return task_pb2.UpdateTaskResponse(response = 0)
 
-        # Try getting the deleted task
-        get_deleted_response = stub.GetTask(task_pb2.GetTaskRequest(id=1))
-        print(f"Get Deleted Task Response: {get_deleted_response.response}")
+def serve():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers = 10))
+    task_pb2_grpc.add_TaskServiceServicer_to_server(TaskService(), server)
+    server.add_insecure_port('[::]:50051')
+    server.start()
+    server.wait_for_termination()
 
-if __name__ == "__main__":
-    run()
+if __name__ == '__main__':
+    serve()
+
