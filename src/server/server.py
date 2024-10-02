@@ -2,6 +2,8 @@ import grpc
 from concurrent import futures
 import sys
 import os
+from app.auth.auth import generate_jwt
+from app.auth.auth_interceptor import AuthInterceptor
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
 
@@ -45,7 +47,9 @@ class TaskService(task_pb2_grpc.TaskServiceServicer):
             return task_pb2.UpdateTaskResponse(response = 0)
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers = 10))
+    auth_interceptor = AuthInterceptor(exempt_methods=["user.TaskService/Login"])
+
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers = 10), interceptors=[auth_interceptor])
     task_pb2_grpc.add_TaskServiceServicer_to_server(TaskService(), server)
     server.add_insecure_port('[::]:50051')
     server.start()
