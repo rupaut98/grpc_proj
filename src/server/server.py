@@ -1,26 +1,39 @@
 import grpc
 from concurrent import futures
 import sys
-import os
-from app.auth.auth import generate_jwt
+import logging
+
+sys.path.append("/Users/rupakraut/Desktop/learning/grpc/grpc_todo_project/src")
+
 from app.auth.auth_interceptor import AuthInterceptor
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
-
+from app.auth.thread_local import get_current_user
 from generated import task_pb2, task_pb2_grpc
 
 tasks = {}
 
+logging.basicConfig(level=logging.DEBUG)
+
 class TaskService(task_pb2_grpc.TaskServiceServicer):
 
     def CreateTask(self, request, context):
-        if request.id in tasks:
-            return task_pb2.CreateTaskResponse(response = 0)
-        tasks[request.id] = {
-            "description": request.description,
-            "priority": request.priority
-        }
-        return task_pb2.CreateTaskResponse(response = 1)
+        logging.debug(f"Received CreateTask request with id: {request.id}, description: {request.description}, priority: {request.priority}")
+        
+        try:
+            user_id = get_current_user()
+            logging.debug(f"user_id: {user_id}")
+            if request.id in tasks:
+                return task_pb2.CreateTaskResponse(response=0)
+            
+            tasks[request.id] = {
+                "description": request.description,
+                "priority": request.priority
+            }
+            return task_pb2.CreateTaskResponse(response=1)
+        except Exception as e:
+            logging.error(f"Exception in CreateTask: {str(e)}")
+            context.set_details(str(e))
+            context.set_code(grpc.StatusCode.UNKNOWN)
+            return task_pb2.CreateTaskResponse(response=0)
     
     def GetTask(self, request, context):
         if request.id in tasks:
@@ -47,7 +60,7 @@ class TaskService(task_pb2_grpc.TaskServiceServicer):
             return task_pb2.UpdateTaskResponse(response = 0)
 
 def serve():
-    auth_interceptor = AuthInterceptor(exempt_methods=["user.TaskService/Login"])
+    auth_interceptor = AuthInterceptor()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers = 10), interceptors=[auth_interceptor])
     task_pb2_grpc.add_TaskServiceServicer_to_server(TaskService(), server)
