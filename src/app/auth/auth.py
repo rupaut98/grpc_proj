@@ -1,8 +1,15 @@
 import jwt
 import datetime
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+
+if SECRET_KEY is None:
+    raise ValueError("JWT_SECRET_KEY environment variable not set!")
 
 def generate_jwt(user_id):
     payload = {

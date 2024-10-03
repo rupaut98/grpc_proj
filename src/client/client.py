@@ -13,13 +13,14 @@ def run():
     token = generate_jwt(user_id=1)
     logging.debug(f"Generated JWT token: {token}")
     metadata = [('authorization', str(token))]
+    logging.debug(f"Metadata: {metadata}")
 
     with grpc.insecure_channel('localhost:50051') as channel:
         stub = task_pb2_grpc.TaskServiceStub(channel)
 
         try:
             create_response = stub.CreateTask(
-                task_pb2.CreateTaskRequest(id=1, description="Learn gRPC", priority=1), metadata=metadata
+                task_pb2.CreateTaskRequest(description="Learn gRPC", priority=1, id=1), metadata=metadata
             )
             logging.debug(f"CreateTask Response: {create_response.response}")
         except grpc.RpcError as e:
